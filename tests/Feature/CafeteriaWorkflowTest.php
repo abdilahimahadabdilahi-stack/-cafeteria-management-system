@@ -7,7 +7,6 @@ use App\Models\Expense;
 use App\Models\Inventory;
 use App\Models\MenuItem;
 use App\Models\Order;
-use App\Models\OrderItem;
 use App\Models\Shift;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -239,6 +238,38 @@ class CafeteriaWorkflowTest extends TestCase
         $this->assertDatabaseMissing('inventory', ['id' => $inventoryItem->id]);
     }
 
+    public function test_dashboard_quick_menu_links_to_pos_with_item_and_uses_image_fallbacks(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $category = Category::query()->create(['name' => 'Cabitaan']);
+        $menuItem = $category->menuItems()->create([
+            'name' => 'Avacado smoothie',
+            'price' => '3.50',
+            'image' => 'https://example.test/avocado-smoothie.jpg',
+        ]);
+        $menuItemWithoutImage = $category->menuItems()->create([
+            'name' => 'Chicken',
+            'price' => '6.00',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee(route('pos.index', ['menu_item_id' => $menuItem->id]), false)
+            ->assertSee('https://example.test/avocado-smoothie.jpg', false)
+            ->assertSee('photo-1622597467836-f3285f2131b8', false)
+            ->assertSee('photo-1532550907401-a500c9a57435', false)
+            ->assertSee('data-using-fallback="false"', false)
+            ->assertSee('data-using-fallback="true"', false)
+            ->assertSee('data-menu-photo', false);
+
+        $this->get(route('pos.index', ['menu_item_id' => $menuItem->id]))
+            ->assertOk()
+            ->assertSee('data-id="'.$menuItem->id.'"', false)
+            ->assertSee('data-id="'.$menuItemWithoutImage->id.'"', false)
+            ->assertSee('data-menu-photo', false);
+    }
+
     public function test_admin_can_manage_categories_staff_expenses_and_shifts(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
@@ -383,11 +414,11 @@ class CafeteriaWorkflowTest extends TestCase
 
         $this->from(route('orders.edit', $order))
             ->put(route('orders.update', $order), [
-            'user_id' => $cashier->id,
-            'table_number' => '7',
-            'payment_method' => 'zaad',
-            'discount' => '0.00',
-            'status' => 'completed',
+                'user_id' => $cashier->id,
+                'table_number' => '7',
+                'payment_method' => 'zaad',
+                'discount' => '0.00',
+                'status' => 'completed',
             ])->assertSessionHasErrors();
         $this->assertSame('completed', $order->fresh()->status);
 

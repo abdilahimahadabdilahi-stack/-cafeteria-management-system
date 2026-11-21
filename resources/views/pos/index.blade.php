@@ -23,8 +23,9 @@
                             data-id="{{ $menuItem->id }}"
                             data-name="{{ $menuItem->name }}"
                             data-price="{{ $menuItem->price }}"
+                            aria-pressed="false"
                         >
-                            <span class="text-amber fs-3"><i class="bi bi-cup-hot"></i></span>
+                            <x-menu-item-image :menu-item="$menuItem" />
                             <span class="fw-semibold mt-2 text-truncate">{{ $menuItem->name }}</span>
                             <span class="small text-secondary">{{ $category->name }}</span>
                             <span class="fw-bold text-coffee mt-2">{{ number_format((float) $menuItem->price, 2) }}</span>
@@ -168,6 +169,11 @@
         document.getElementById('cart-total').textContent = money(Math.max(0, subtotal - discount));
         document.getElementById('cart-count').textContent = `${count} ${count === 1 ? 'item' : 'items'}`;
         document.getElementById('checkout-button').disabled = cart.size === 0;
+        document.querySelectorAll('.menu-add').forEach((button) => {
+            const isSelected = cart.has(button.dataset.id);
+            button.classList.toggle('is-selected', isSelected);
+            button.setAttribute('aria-pressed', String(isSelected));
+        });
     }
 
     document.querySelectorAll('.menu-add').forEach((button) => {
@@ -204,6 +210,16 @@
             event.preventDefault();
         }
     });
+
+    const requestedMenuItemId = new URLSearchParams(window.location.search).get('menu_item_id');
+    if (requestedMenuItemId !== null) {
+        const requestedMenuItem = Array.from(document.querySelectorAll('.menu-add'))
+            .find((button) => button.dataset.id === requestedMenuItemId);
+        if (requestedMenuItem) {
+            requestedMenuItem.click();
+        }
+    }
+
     renderCart();
 </script>
 @endpush
