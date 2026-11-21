@@ -363,6 +363,68 @@ class CafeteriaWorkflowTest extends TestCase
         $this->assertDatabaseMissing('shifts', ['id' => $shift->id]);
     }
 
+    public function test_categories_index_maps_known_icons_and_uses_a_fallback_for_unknown_values(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $categoryWithKnownIcon = Category::query()->create([
+            'name' => 'Cunto Waddani',
+            'icon' => 'local food',
+        ]);
+        $categoryWithKnownIcon->menuItems()->create([
+            'name' => 'Canjeero',
+            'price' => '2.50',
+        ]);
+        Category::query()->create([
+            'name' => 'Fadiirad',
+            'icon' => 'bun',
+        ]);
+        Category::query()->create([
+            'name' => 'Shaah',
+            'icon' => 'cup-hot',
+        ]);
+        Category::query()->create([
+            'name' => 'Sharaab',
+            'icon' => 'cup-straw',
+        ]);
+        Category::query()->create([
+            'name' => 'cafe',
+            'icon' => 'food',
+        ]);
+        Category::query()->create([
+            'name' => 'chicken',
+            'icon' => 'egg-fried',
+        ]);
+        $categoryWithUnknownIcon = Category::query()->create([
+            'name' => 'Seasonal',
+            'icon' => 'mystery-food',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('categories.index'))
+            ->assertOk()
+            ->assertSee('class="bi bi-basket2" aria-hidden="true"', false)
+            ->assertSee('class="bi bi-egg-fried" aria-hidden="true"', false)
+            ->assertSee('class="bi bi-cup-hot" aria-hidden="true"', false)
+            ->assertSee('class="bi bi-cup-straw" aria-hidden="true"', false)
+            ->assertSee('class="bi bi-grid" aria-hidden="true"', false)
+            ->assertSee('Local Food')
+            ->assertSee('Bun')
+            ->assertSee('Cup Hot')
+            ->assertSee('Cup Straw')
+            ->assertSee('Food')
+            ->assertSee('Egg Fried')
+            ->assertSee('Mystery Food')
+            ->assertSee('category-item-count', false)
+            ->assertSee('>1</span>', false)
+            ->assertSee('>0</span>', false)
+            ->assertSee(route('categories.create'), false)
+            ->assertSee(route('categories.edit', $categoryWithKnownIcon), false)
+            ->assertSee(route('categories.destroy', $categoryWithKnownIcon), false)
+            ->assertSee('onsubmit="return confirm(', false)
+            ->assertSee('data-category-reveal', false)
+            ->assertDontSee('bi-mystery-food', false);
+    }
+
     public function test_admin_can_manage_order_lines_and_cancel_without_deleting_history(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
