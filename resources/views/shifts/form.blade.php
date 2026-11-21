@@ -6,6 +6,9 @@
 
 @section('content')
 <div class="card p-3 p-lg-4" style="max-width: 800px">
+    <div class="alert alert-info" role="alert">
+        Opening balance and expected closing are calculated from the account's shift activity. Closing cash is the amount counted at handover.
+    </div>
     <form method="POST" action="{{ $shift->exists ? route('shifts.update', $shift) : route('shifts.store') }}">
         @csrf
         @if($shift->exists) @method('PUT') @endif
@@ -31,17 +34,15 @@
                 @error('end_time')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
             <div class="col-md-6">
-                <label for="opening_cash" class="form-label">Opening cash</label>
-                <input id="opening_cash" name="opening_cash" type="number" step="0.01" min="0" max="999999.99" value="{{ old('opening_cash', $shift->opening_cash) }}" class="form-control @error('opening_cash') is-invalid @enderror" required>
-                @error('opening_cash')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                <label for="opening_cash" class="form-label">Previous balance (automatic)</label>
+                <input id="opening_cash" type="number" step="0.01" value="{{ $shift->opening_cash }}" class="form-control" readonly>
             </div>
             <div class="col-md-6">
-                <label for="expected_cash" class="form-label">Expected cash <span class="text-secondary">(optional)</span></label>
-                <input id="expected_cash" name="expected_cash" type="number" step="0.01" min="0" max="999999.99" value="{{ old('expected_cash', $shift->expected_cash) }}" class="form-control @error('expected_cash') is-invalid @enderror">
-                @error('expected_cash')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                <label for="expected_cash" class="form-label">Expected closing (automatic)</label>
+                <input id="expected_cash" type="number" step="0.01" value="{{ $summary['expected_cash'] }}" class="form-control" readonly>
             </div>
             <div class="col-md-6">
-                <label for="closing_cash" class="form-label">Closing cash <span class="text-secondary">(optional)</span></label>
+                <label for="closing_cash" class="form-label">Actual closing cash <span class="text-secondary">(optional)</span></label>
                 <input id="closing_cash" name="closing_cash" type="number" step="0.01" min="0" max="999999.99" value="{{ old('closing_cash', $shift->closing_cash) }}" class="form-control @error('closing_cash') is-invalid @enderror">
                 @error('closing_cash')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>

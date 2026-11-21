@@ -52,6 +52,8 @@ Route::middleware('auth')->group(function (): void {
             ->scoped(['order' => 'id', 'orderItem' => 'id']);
         Route::resource('expenses', ExpenseController::class)
             ->except(['show']);
+        Route::patch('shifts/account-starting-balance', [ShiftController::class, 'updateStartingBalance'])
+            ->name('shifts.starting-balance.update');
         Route::resource('shifts', ShiftController::class)
             ->except(['show']);
         Route::resource('staff', UserController::class)

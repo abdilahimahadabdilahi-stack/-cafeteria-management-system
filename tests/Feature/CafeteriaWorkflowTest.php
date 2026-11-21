@@ -311,9 +311,6 @@ class CafeteriaWorkflowTest extends TestCase
         $this->post(route('shifts.store'), [
             'user_id' => $admin->id,
             'start_time' => $startTime->format('Y-m-d H:i:s'),
-            'opening_cash' => '40.00',
-            'expected_cash' => '',
-            'closing_cash' => '',
             'end_time' => '',
         ])->assertRedirect(route('shifts.index'));
         $shift = Shift::query()->sole();
@@ -322,11 +319,14 @@ class CafeteriaWorkflowTest extends TestCase
             'user_id' => $admin->id,
             'start_time' => $startTime->format('Y-m-d H:i:s'),
             'end_time' => $startTime->copy()->addHours(8)->format('Y-m-d H:i:s'),
-            'opening_cash' => '40.00',
-            'expected_cash' => '125.00',
             'closing_cash' => '120.00',
         ])->assertRedirect(route('shifts.index'));
-        $this->assertDatabaseHas('shifts', ['id' => $shift->id, 'closing_cash' => '120.00']);
+        $this->assertDatabaseHas('shifts', [
+            'id' => $shift->id,
+            'opening_cash' => '0.00',
+            'expected_cash' => '0.00',
+            'closing_cash' => '120.00',
+        ]);
         $this->delete(route('shifts.destroy', $shift))
             ->assertRedirect(route('shifts.index'));
         $this->assertDatabaseMissing('shifts', ['id' => $shift->id]);
