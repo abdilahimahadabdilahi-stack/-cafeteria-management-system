@@ -493,4 +493,113 @@ class CafeteriaWorkflowTest extends TestCase
         ]);
         $this->assertDatabaseHas('order_items', ['id' => $remainingLine->id]);
     }
+
+    public function test_order_history_formats_payment_and_status_badges_and_keeps_pagination(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $cashiers = [];
+        foreach (['nuur', 'ahmed', 'salo', 'ali'] as $name) {
+            $cashiers[$name] = User::factory()->create([
+                'name' => $name,
+                'role' => 'cashier',
+            ]);
+        }
+
+        $category = Category::query()->create(['name' => 'Cabitaan']);
+        $menuItem = $category->menuItems()->create([
+            'name' => 'Shaah',
+            'price' => '2.50',
+        ]);
+        $orders = [
+            [
+                'order_number' => 'CAF-20261121-BFOFU4P0',
+                'user_id' => $cashiers['nuur']->id,
+                'table_number' => null,
+                'payment_method' => 'zaad',
+                'status' => 'completed',
+                'total_amount' => '462000.00',
+            ],
+            [
+                'order_number' => 'CAF-20261121-AHMED001',
+                'user_id' => $cashiers['ahmed']->id,
+                'table_number' => '4',
+                'payment_method' => 'cash',
+                'status' => 'pending',
+                'total_amount' => '6000.00',
+            ],
+            [
+                'order_number' => 'CAF-20261121-SALO0001',
+                'user_id' => $cashiers['salo']->id,
+                'table_number' => '5',
+                'payment_method' => 'edahab',
+                'status' => 'cancelled',
+                'total_amount' => '300000.00',
+            ],
+        ];
+
+        for ($number = 4; $number <= 16; $number++) {
+            $orders[] = [
+                'order_number' => sprintf('CAF-20261121-TEST%04d', $number),
+                'user_id' => $cashiers['ali']->id,
+                'table_number' => null,
+                'payment_method' => 'cash',
+                'status' => 'completed',
+                'total_amount' => '2.50',
+            ];
+        }
+
+        $firstOrder = null;
+        $createdAt = now()->startOfMinute();
+        foreach ($orders as $index => $orderAttributes) {
+            $createdAtForOrder = $createdAt->copy()->subMinutes($index);
+            $order = Order::query()->create([
+                ...$orderAttributes,
+                'subtotal' => $orderAttributes['total_amount'],
+                'discount' => '0.00',
+                'created_at' => $createdAtForOrder,
+                'updated_at' => $createdAtForOrder,
+            ]);
+            $firstOrder ??= $order;
+
+            $itemCount = $index === 1 ? 2 : 1;
+            $lineTotal = number_format((float) $orderAttributes['total_amount'] / $itemCount, 2, '.', '');
+            for ($line = 0; $line < $itemCount; $line++) {
+                $order->orderItems()->create([
+                    'menu_item_id' => $menuItem->id,
+                    'quantity' => 1,
+                    'unit_price' => $lineTotal,
+                    'total_price' => $lineTotal,
+                ]);
+            }
+        }
+
+        $this->actingAs($admin)
+            ->get(route('orders.index'))
+            ->assertOk()
+            ->assertSee('CAF-20261121-BFOFU4P0')
+            ->assertSee('nuur')
+            ->assertSee('ahmed')
+            ->assertSee('salo')
+            ->assertSee('ali')
+            ->assertSee('Takeaway')
+            ->assertSee('1 item')
+            ->assertSee('2 items')
+            ->assertSee('462,000.00')
+            ->assertSee('6,000.00')
+            ->assertSee('300,000.00')
+            ->assertSee('payment-badge--zaad', false)
+            ->assertSee('payment-badge--cash', false)
+            ->assertSee('payment-badge--edahab', false)
+            ->assertSee('order-status--completed', false)
+            ->assertSee('order-status--pending', false)
+            ->assertSee('order-status--cancelled', false)
+            ->assertSee(route('orders.create'), false)
+            ->assertSee(route('orders.show', $firstOrder), false)
+            ->assertSee('Showing 1&ndash;15 of 16 orders', false);
+
+        $this->get(route('orders.index', ['page' => 2]))
+            ->assertOk()
+            ->assertSee('CAF-20261121-TEST0016')
+            ->assertDontSee('CAF-20261121-BFOFU4P0');
+    }
 }
